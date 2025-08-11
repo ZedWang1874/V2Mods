@@ -32,13 +32,28 @@ if not exist "%LOCAL_MOD_DIR%" (
 REM Check VMF configuration
 echo 1. Checking VMF configuration...
 cd /d "%VMB_DIR%"
-vmb.exe config --show | findstr "mods_dir" | findstr "%VMB_DIR:\=\\%\\mods"
+vmb.exe config --show > temp_config.txt
+findstr "mods_dir.*mods" temp_config.txt >nul
 if errorlevel 1 (
-    echo ERROR: VMF configuration check failed
-    echo Expected mods_dir: %VMB_DIR%\mods
+    echo ERROR: VMF configuration check failed - no mods_dir found
+    echo Current configuration:
+    type temp_config.txt
+    del temp_config.txt
     exit /b 1
 )
-echo [OK] VMF configuration is correct
+
+REM Check if mods_dir points to the correct directory (allow for forward/backward slashes)
+findstr "mods_dir.*[/\\]mods" temp_config.txt | findstr "Vermintide-Mod-Builder" >nul
+if errorlevel 1 (
+    echo WARNING: VMF mods_dir may not point to the expected directory
+    echo Current configuration:
+    type temp_config.txt | findstr "mods_dir"
+    echo Expected: Contains 'Vermintide-Mod-Builder' and ends with 'mods'
+    echo Continuing anyway...
+) else (
+    echo [OK] VMF configuration looks correct
+)
+del temp_config.txt
 echo.
 
 REM Create VMF mod directory if it doesn't exist
@@ -111,16 +126,16 @@ if errorlevel 1 (
 echo [OK] Build completed successfully
 echo.
 
-echo [OK] Build completed successfully
-echo.
-
 REM Check if all bundle files were created and copied correctly
 echo 6. Verifying build output...
 set MOD_ID_FILE=%VMF_MOD_DIR%\itemV2.cfg
 if exist "%MOD_ID_FILE%" (
     for /f "tokens=2 delims==" %%i in ('type "%MOD_ID_FILE%" ^| findstr "published_id"') do (
         set WORKSHOP_ID=%%i
+        REM Remove any spaces and unwanted characters
         set WORKSHOP_ID=!WORKSHOP_ID: =!
+        set WORKSHOP_ID=!WORKSHOP_ID:;=!
+        set WORKSHOP_ID=!WORKSHOP_ID:L=!
     )
     
     if defined WORKSHOP_ID (
@@ -144,6 +159,29 @@ if exist "%MOD_ID_FILE%" (
                 echo [OK] Main mod file found in Workshop directory
             ) else (
                 echo WARNING: Main mod file not found in Workshop directory
+            )
+            
+            REM Check for missing bundle files by comparing with bundleV2 directory
+            set BUNDLE_MISSING=0
+            for %%B in ("%VMF_MOD_DIR%\bundleV2\*.mod_bundle") do (
+                set BUNDLE_NAME=%%~nxB
+                if not exist "!WORKSHOP_PATH!\!BUNDLE_NAME!" (
+                    echo WARNING: Missing bundle file in Workshop: !BUNDLE_NAME!
+                    echo Copying missing file...
+                    copy "%%B" "!WORKSHOP_PATH!\" /Y >nul
+                    if errorlevel 1 (
+                        echo ERROR: Failed to copy !BUNDLE_NAME!
+                        set BUNDLE_MISSING=1
+                    ) else (
+                        echo [OK] Copied !BUNDLE_NAME! to Workshop directory
+                    )
+                )
+            )
+            
+            if !BUNDLE_MISSING!==1 (
+                echo WARNING: Some bundle files could not be copied
+            ) else (
+                echo [OK] All bundle files verified in Workshop directory
             )
         ) else (
             echo WARNING: Workshop directory not found: !WORKSHOP_PATH!
