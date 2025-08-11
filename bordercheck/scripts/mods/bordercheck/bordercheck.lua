@@ -180,10 +180,6 @@ local function render_boundaries()
         ::continue::
     end
 end
-            end
-        end)
-    end
-end
 
 -- Commands
 mod:command("bordercheck_toggle", "Toggle border visualization", function()
