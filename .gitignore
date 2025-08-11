@@ -7,8 +7,10 @@ resource_packages/
 .build/
 
 # Build and upload scripts (generated/temporary)
+# Note: build_mod.bat and check_environment.bat are kept for development
 build_and_upload.bat
 compile_*.bat
+temp_*.txt
 
 # Backup and test files
 *_backup.lua
@@ -41,3 +43,6 @@ debug_*
 # Temporary directories
 .temp/
 temp/
+
+# processed files
+*.processed

@@ -1,5 +1,33 @@
 local mod = get_mod("bordercheck")
 
+--[[
+Vermintide 2 Useful APIs for mod development:
+
+Position/Movement:
+- Unit.world_position(unit, node_index) - Get world position of unit
+- Vector3(x, y, z) - Create Vector3
+- Vector3.distance(pos1, pos2) - Calculate distance
+
+Physics/Raycasting:
+- PhysicsWorld.immediate_raycast(physics_world, from, to, mode, collision_filter, ...)
+- Managers.world:world("level_world") - Get level world
+- World.get_data(world, "physics_world") - Get physics world
+
+Player:
+- Managers.player:local_player() - Get local player
+- local_player.player_unit - Get player unit
+- Unit.alive(unit) - Check if unit is alive
+
+Rendering/Debug:
+- QuickDrawer:sphere(position, radius, color) - Draw sphere
+- QuickDrawer:line(from, to, color) - Draw line
+- Managers.state.debug_text:output_world_text(text, font_size, position, ...)
+- LineObject.add_line(world, color, start_pos, end_pos)
+
+Colors:
+- Color(alpha, red, green, blue) - ARGB format (0-255)
+--]]
+
 -- Simple and reliable border detection mod
 local enabled = false
 local boundary_markers = {}
@@ -15,7 +43,11 @@ end
 local function get_player_position()
     local local_player = Managers.player:local_player()
     if local_player and local_player.player_unit and Unit.alive(local_player.player_unit) then
-        return Unit.world_position(local_player.player_unit, 0)
+        local pos = Unit.world_position(local_player.player_unit, 0)
+        -- Ensure we return a proper Vector3
+        if pos then
+            return Vector3(pos[1] or pos.x or 0, pos[2] or pos.y or 0, pos[3] or pos.z or 0)
+        end
     end
     return nil
 end
@@ -35,7 +67,9 @@ local function simple_raycast(from_pos, direction, distance)
     end)
     
     if success and result and result.position then
-        return result.position
+        -- Ensure we return a proper Vector3 by creating a new one
+        local pos = result.position
+        return Vector3(pos[1] or pos.x or 0, pos[2] or pos.y or 0, pos[3] or pos.z or 0)
     end
     return nil
 end
@@ -94,10 +128,28 @@ local function render_boundaries()
     
     -- Use multiple rendering methods for maximum compatibility
     for _, marker in ipairs(boundary_markers) do
+        -- Validate marker position
+        if not marker or not marker.position then
+            debug_print("Invalid marker found, skipping")
+            goto continue
+        end
+        
+        -- Ensure position is a proper Vector3
+        local pos = marker.position
+        local safe_pos
+        pcall(function()
+            safe_pos = Vector3(pos[1] or pos.x or 0, pos[2] or pos.y or 0, pos[3] or pos.z or 0)
+        end)
+        
+        if not safe_pos then
+            debug_print("Failed to create safe position, skipping marker")
+            goto continue
+        end
+        
         -- Method 1: Try QuickDrawer
         pcall(function()
             if QuickDrawer then
-                QuickDrawer:sphere(marker.position, 0.2, marker.color)
+                QuickDrawer:sphere(safe_pos, 0.2, marker.color)
             end
         end)
         
@@ -107,7 +159,7 @@ local function render_boundaries()
                 Managers.state.debug_text:output_world_text(
                     "●",
                     2,
-                    marker.position,
+                    safe_pos,
                     nil,
                     nil,
                     marker.color
@@ -119,9 +171,15 @@ local function render_boundaries()
         pcall(function()
             local world = Managers.world:world("level_world")
             if world then
-                local start_pos = marker.position
-                local end_pos = marker.position + Vector3(0, 0.5, 0)
+                local start_pos = safe_pos
+                local end_pos = safe_pos + Vector3(0, 0.5, 0)
                 LineObject.add_line(world, marker.color, start_pos, end_pos)
+            end
+        end)
+        
+        ::continue::
+    end
+end
             end
         end)
     end
