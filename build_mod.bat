@@ -217,6 +217,19 @@ if /i "!UPLOAD_CHOICE!"=="y" (
     echo.
     echo Your mod has been updated on Steam Workshop!
     echo URL: http://steamcommunity.com/sharedfiles/filedetails/?id=!WORKSHOP_ID!
+    
+    echo.
+    echo 8. Syncing bundle files back to local directory...
+    if exist "%VMF_MOD_DIR%\bundleV2\" (
+        xcopy "%VMF_MOD_DIR%\bundleV2\*" "%LOCAL_MOD_DIR%\bundleV2\" /Y /Q
+        if errorlevel 1 (
+            echo WARNING: Failed to sync bundle files back to local directory
+        ) else (
+            echo [OK] Bundle files synced back to local directory
+        )
+    ) else (
+        echo WARNING: VMF bundleV2 directory not found
+    )
 ) else (
     echo Upload skipped.
     echo.
