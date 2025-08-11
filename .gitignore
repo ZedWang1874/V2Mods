@@ -1,0 +1,43 @@
+# Vermintide 2 Mod Development .gitignore
+
+# Compiled mod bundles and packages
+bundleV2/
+*.mod_bundle
+resource_packages/
+.build/
+
+# Build and upload scripts (generated/temporary)
+build_and_upload.bat
+compile_*.bat
+
+# Backup and test files
+*_backup.lua
+*_test.lua
+*_v2.lua
+*_simple.lua
+
+# Development temporary files
+*.tmp
+*.temp
+*.bak
+*.log
+
+# Windows system files
+Thumbs.db
+Desktop.ini
+*.ini.bak
+
+# Steam Workshop temporary files
+ugc_*/
+workshop_*/
+
+# VS Code settings (optional - remove if you want to share settings)
+.vscode/
+
+# Any local configuration files
+local_config.*
+debug_*
+
+# Temporary directories
+.temp/
+temp/
